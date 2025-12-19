@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap');
+
+:root{
+  --font-sans: "Prompt", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+               Roboto, "Helvetica Neue", Arial, "Noto Sans Thai", "Noto Sans", sans-serif;
+
+  --lh-tight: 1.1;
+  --lh-snug: 1.25;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.7;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-extrabold: 800;
+}
+
+body{
+  font-family: var(--font-sans);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Typography classes */
+.t-hero{
+  font-size: clamp(2.25rem, 4vw, 4rem);
+  line-height: var(--lh-tight);
+  font-weight: var(--fw-extrabold);
+  letter-spacing: -0.02em;
+}
+
+.t-h2{
+  font-size: clamp(1.5rem, 2.2vw, 2.25rem);
+  line-height: var(--lh-snug);
+  font-weight: var(--fw-bold);
+}
+
+.t-h3{
+  font-size: clamp(1.25rem, 1.8vw, 1.5rem);
+  line-height: var(--lh-snug);
+  font-weight: var(--fw-semibold);
+}
+
+.t-subtitle{
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: var(--lh-relaxed);
+  font-weight: var(--fw-semibold);
+}
+
+.t-body{
+  font-size: 1rem;
+  line-height: var(--lh-relaxed);
+  font-weight: var(--fw-regular);
+}
+
+.t-label{
+  font-size: .875rem;
+  line-height: 1.4;
+  font-weight: var(--fw-medium);
+}
+
+.t-button{
+  font-size: 1.0625rem;
+  line-height: 1;
+  font-weight: var(--fw-bold);
+}
+

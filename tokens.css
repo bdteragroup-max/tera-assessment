@@ -1,0 +1,27 @@
+:root{
+  /* Brand */
+  --brand-red: #FF2301;      /* TERA red (ปรับได้) */
+  --brand-indigo: #4f46e5;   /* Tailwind indigo-600 */
+  --brand-indigo-hover: #4338ca;
+
+  /* Text */
+  --text-900: #111827;
+  --text-700: #374151;
+  --text-600: #4b5563;
+  --text-500: #6b7280;
+
+  /* Surface */
+  --bg-50: #eff6ff;
+  --bg-100: #e0e7ff;
+  --card: #ffffff;
+  --border: #d1d5db;
+
+  /* Radius */
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-2xl: 28px;
+
+  /* Shadow */
+  --shadow-lg: 0 20px 60px rgba(0,0,0,.18);
+  --shadow-hero: 0 16px 40px rgba(0,0,0,.45);
+}
