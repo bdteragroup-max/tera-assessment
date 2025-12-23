@@ -721,6 +721,17 @@ var questions = [
 
 function $(id) { return document.getElementById(id); }
 
+function mapChapterToFactor_(chapter) {
+  const c = String(chapter || '').toLowerCase();
+  if (c.includes('technical')) return 'Technical';
+  if (c.includes('sales')) return 'Sales';
+  if (c.includes('logic')) return 'Logic';
+  if (c.includes('mindset')) return 'Mindset';
+  if (c.includes('personality')) return 'Personality';
+  if (c.includes('final')) return 'Final';
+  return 'Other';
+}
+
 function showPage(pageId) {
     const pages = ['landing', 'profile', 'assessment', 'results'];
     pages.forEach(id => $(id)?.classList.add('hidden'));
@@ -771,236 +782,276 @@ function fillThaiLists(id, items) {
 }
 
 function genUUID_() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
 }
 
 function buildScores_() {
-    const scores = {};
-    personas.forEach(p => { scores[p.key] = 0; });
+  const scores = {};
+  personas.forEach(p => { scores[p.key] = 0; });
 
-    (appData.answers || []).forEach(ans => {
-        personas.forEach(p => {
-            const k = p.key;
-            if (typeof ans[k] === 'number') scores[k] += ans[k];
-        });
+  (appData.answers || []).forEach(ans => {
+    personas.forEach(p => {
+      const k = p.key;
+      if (typeof ans[k] === 'number') scores[k] += ans[k];
     });
+  });
 
-    return scores;
+  return scores;
+}
+
+function buildFactorScores_() {
+  const factorTotals = {};     // {Sales: 0, Technical: 0, ...}
+  const factorPersona = {};    // {Sales: {LION:0,...}, ...}
+
+  // init known factors (ช่วยให้หลังบ้านคอลัมน์นิ่ง)
+  const preset = ['Personality', 'Technical', 'Sales', 'Mindset', 'Logic', 'Final', 'Other'];
+  preset.forEach(f => {
+    factorTotals[f] = 0;
+    factorPersona[f] = {};
+    personas.forEach(p => { factorPersona[f][p.key] = 0; });
+  });
+
+  (appData.answers || []).forEach(ans => {
+    const f = ans.__factor || ans.factor || 'Other';
+    if (!factorTotals[f]) {
+      factorTotals[f] = 0;
+      factorPersona[f] = {};
+      personas.forEach(p => { factorPersona[f][p.key] = 0; });
+    }
+
+    personas.forEach(p => {
+      const k = p.key;
+      if (typeof ans[k] === 'number') {
+        factorPersona[f][k] += ans[k];
+        factorTotals[f] += ans[k];
+      }
+    });
+  });
+
+  return { factorTotals, factorPersona };
 }
 
 /** =========================================
  *  NAV
  *  ========================================= */
 function goToProfile() {
-    showPage('profile');
+  showPage('profile');
 }
 
 function startAssessment() {
-    const name = ($('userName')?.value || '').trim();
-    const position = ($('userPosition')?.value || '').trim();
-    const exp = ($('userExperience')?.value || '').trim();
+  const name = ($('userName')?.value || '').trim();
+  const position = ($('userPosition')?.value || '').trim();
+  const exp = ($('userExperience')?.value || '').trim();
 
-    appData.profile = { name, position, experience: exp };
-    appData.currentQuestion = 0;
-    appData.answers = [];
-    appData.results = null;
+  appData.profile = { name, position, experience: exp };
+  appData.currentQuestion = 0;
+  appData.answers = [];
+  appData.results = null;
 
-    showPage('assessment');
-    renderQuestion();
+  showPage('assessment');
+  renderQuestion();
 }
 
 function resetAssessment() {
-    appData.currentQuestion = 0;
-    appData.answers = [];
-    appData.profile = {};
-    appData.results = null;
+  appData.currentQuestion = 0;
+  appData.answers = [];
+  appData.profile = {};
+  appData.results = null;
 
-    if ($('userName')) $('userName').value = '';
-    if ($('userPosition')) $('userPosition').value = '';
-    if ($('userExperience')) $('userExperience').value = '';
+  if ($('userName')) $('userName').value = '';
+  if ($('userPosition')) $('userPosition').value = '';
+  if ($('userExperience')) $('userExperience').value = '';
 
-    showPage('landing');
+  showPage('landing');
 }
 
 /** =========================================
  *  QUIZ RENDER
  *  ========================================= */
 function renderQuestion() {
-    const q = questions[appData.currentQuestion];
-    if (!q) return;
+  const q = questions[appData.currentQuestion];
+  if (!q) return;
 
-    // progress 1/45
-    const pill = $('progressPill');
-    if (pill) pill.textContent = (appData.currentQuestion + 1) + '/' + questions.length;
+  // progress
+  const pill = $('progressPill');
+  if (pill) pill.textContent = (appData.currentQuestion + 1) + '/' + questions.length;
 
-    // text
-    if ($('questionText')) $('questionText').textContent = q.question || '';
-    if ($('questionSubText')) $('questionSubText').textContent = q.subText || '';
+  // text
+  if ($('questionText')) $('questionText').textContent = q.question || '';
+  if ($('questionSubText')) $('questionSubText').textContent = q.subText || '';
 
-    // options
-    const box = $('optionsContainer');
-    if (!box) return;
+  const box = $('optionsContainer');
+  if (!box) return;
 
-    box.innerHTML = '';
+  box.innerHTML = '';
 
-    (q.options || []).forEach((opt, idx) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'option-card';
-        btn.setAttribute('data-idx', String(idx));
-        btn.textContent = opt.text || ('ตัวเลือก ' + (idx + 1));
-        btn.addEventListener('click', handleAnswerClick);
-        box.appendChild(btn);
-    });
+  (q.options || []).forEach((opt, idx) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'option-card';
+    btn.setAttribute('data-idx', String(idx));
+    btn.textContent = opt.text || ('ตัวเลือก ' + (idx + 1));
+    btn.addEventListener('click', handleAnswerClick);
+    box.appendChild(btn);
+  });
 }
 
 function handleAnswerClick(ev) {
-    const btn = ev.currentTarget;
-    const idx = parseInt(btn.getAttribute('data-idx'), 10);
+  const btn = ev.currentTarget;
+  const idx = parseInt(btn.getAttribute('data-idx'), 10);
 
-    const q = questions[appData.currentQuestion];
-    if (!q || !q.options || !q.options[idx]) return;
+  const q = questions[appData.currentQuestion];
+  if (!q || !q.options || !q.options[idx]) return;
 
-    const box = $('optionsContainer');
-    const buttons = box ? box.querySelectorAll('button.option-card') : [];
+  const box = $('optionsContainer');
+  const buttons = box ? box.querySelectorAll('button.option-card') : [];
 
-    // กันกดซ้ำ
-    for (let i = 0; i < buttons.length; i++) {
-        if (buttons[i].disabled) return;
+  // กันกดซ้ำ
+  for (let i = 0; i < buttons.length; i++) {
+    if (buttons[i].disabled) return;
+  }
+
+  // ✅ บันทึกคำตอบ + ใส่ factor จาก chapter อัตโนมัติ (ไม่แก้ questions)
+  const picked = Object.assign({}, q.options[idx]);
+  picked.__chapter = q.chapter || '';
+  picked.__factor = mapChapterToFactor_(q.chapter);
+
+  appData.answers.push(picked);
+
+  // UI selected
+  btn.classList.add('is-selected');
+
+  const oldCheck = btn.querySelector('.option-check');
+  if (oldCheck) oldCheck.remove();
+
+  const check = document.createElement('span');
+  check.className = 'option-check';
+  check.textContent = '✓';
+  btn.appendChild(check);
+
+  // disable all
+  for (let i = 0; i < buttons.length; i++) buttons[i].disabled = true;
+
+  setTimeout(() => {
+    if (appData.currentQuestion < questions.length - 1) {
+      appData.currentQuestion++;
+      renderQuestion();
+    } else {
+      calculateResults();
     }
-
-    // บันทึกคำตอบ
-    appData.answers.push(q.options[idx]);
-
-    // ใส่สถานะ selected + ติ๊กถูก
-    btn.classList.add('is-selected');
-
-    const oldCheck = btn.querySelector('.option-check');
-    if (oldCheck) oldCheck.remove();
-
-    const check = document.createElement('span');
-    check.className = 'option-check';
-    check.textContent = '✓';
-    btn.appendChild(check);
-
-    // disable ปุ่มทั้งหมด
-    for (let i = 0; i < buttons.length; i++) buttons[i].disabled = true;
-
-    // ไปข้อถัดไป
-    setTimeout(() => {
-        if (appData.currentQuestion < questions.length - 1) {
-            appData.currentQuestion++;
-            renderQuestion();
-        } else {
-            calculateResults();
-        }
-    }, 300);
+  }, 300);
 }
 
 /** =========================================
  *  RESULTS + SUBMIT
  *  ========================================= */
 function calculateResults() {
-    const scores = buildScores_();
+  const scores = buildScores_();
 
-    const sorted = Object.keys(scores)
-        .map(k => ({ key: k, score: scores[k] }))
-        .sort((a, b) => b.score - a.score);
+  const sorted = Object.keys(scores)
+    .map(k => ({ key: k, score: scores[k] }))
+    .sort((a, b) => b.score - a.score);
 
-    const primaryKey = sorted[0]?.key || personas[0].key;
-    const secondaryKey = sorted[1]?.key || personas[1].key;
+  const primaryKey = sorted[0]?.key || personas[0].key;
+  const secondaryKey = sorted[1]?.key || personas[1].key;
 
-    appData.results = { primary: primaryKey, secondary: secondaryKey };
+  appData.results = { primary: primaryKey, secondary: secondaryKey };
 
-    // ส่งข้อมูลขึ้นชีต (ไม่บล็อกหน้าผลลัพธ์)
-    submitToGoogleSheet().catch(err => console.error("❌ submit error", err));
+  // ส่งข้อมูลขึ้นชีต (ไม่บล็อก UI)
+  submitToGoogleSheet().catch(err => console.error("❌ submit error", err));
 
-    showResults(primaryKey, secondaryKey, scores);
+  showResults(primaryKey, secondaryKey, scores);
 }
 
 function showResults(primaryKey, secondaryKey, scoresObj) {
-    const primary = getPersona(primaryKey);
-    const secondary = getPersona(secondaryKey);
+  const primary = getPersona(primaryKey);
+  const secondary = getPersona(secondaryKey);
 
-    const name = appData.profile?.name || 'Guest';
-    if ($('resultName')) $('resultName').textContent = name;
+  const name = appData.profile?.name || 'Guest';
+  if ($('resultName')) $('resultName').textContent = name;
 
-    // primary
-    if ($('primaryEmoji')) $('primaryEmoji').textContent = primary.emoji || '⭐';
-    if ($('primaryName')) $('primaryName').textContent = primary.name || 'Primary';
+  // primary
+  if ($('primaryEmoji')) $('primaryEmoji').textContent = primary.emoji || '⭐';
+  if ($('primaryName')) $('primaryName').textContent = primary.name || 'Primary';
 
-    const primaryCard = $('primaryCard');
-    if (primaryCard) primaryCard.style.background = getPersonaGradient(primary.key);
+  const primaryCard = $('primaryCard');
+  if (primaryCard) primaryCard.style.background = getPersonaGradient(primary.key);
 
-    renderTraitPills($('primaryTraits'), primary.traits);
+  renderTraitPills($('primaryTraits'), primary.traits);
 
-    // secondary
-    if ($('secondaryEmoji')) $('secondaryEmoji').textContent = secondary.emoji || '✨';
-    if ($('secondaryName')) $('secondaryName').textContent = secondary.name || 'Secondary';
+  // secondary
+  if ($('secondaryEmoji')) $('secondaryEmoji').textContent = secondary.emoji || '✨';
+  if ($('secondaryName')) $('secondaryName').textContent = secondary.name || 'Secondary';
 
-    // Thai content
-    const thaiHeadlineEl = $('thaiHeadline');
-    if (thaiHeadlineEl) {
-        thaiHeadlineEl.textContent = (primary.thName ? primary.thName + ' — ' : '') + (primary.headline || '');
-    }
+  // Thai content
+  const thaiHeadlineEl = $('thaiHeadline');
+  if (thaiHeadlineEl) {
+    thaiHeadlineEl.textContent = (primary.thName ? primary.thName + ' — ' : '') + (primary.headline || '');
+  }
 
-    fillThaiLists('thaiStrengths', primary.strengths);
-    fillThaiLists('thaiWeaknesses', primary.weaknesses);
-    fillThaiLists('thaiSuggestions', primary.suggestions);
+  fillThaiLists('thaiStrengths', primary.strengths);
+  fillThaiLists('thaiWeaknesses', primary.weaknesses);
+  fillThaiLists('thaiSuggestions', primary.suggestions);
 
-    showPage('results');
+  showPage('results');
 
-    // debug (ถ้าจะเช็คคะแนน)
-    console.log("RESULT:", { primaryKey, secondaryKey, scores: scoresObj });
+  console.log("RESULT:", { primaryKey, secondaryKey, scores: scoresObj });
 }
 
 async function submitToGoogleSheet() {
-    if (!SCRIPT_URL) {
-        console.error("SCRIPT_URL ว่าง");
-        return;
-    }
-    if (!appData.results) return;
+  if (!SCRIPT_URL) {
+    console.error("SCRIPT_URL ว่าง");
+    return;
+  }
+  if (!appData.results) return;
 
-    const payload = {
-        uuid: genUUID_(),
-        ts: new Date().toISOString(),
-        name: appData.profile?.name || '',
-        position: appData.profile?.position || '',
-        experience: appData.profile?.experience || '',
-        primary: appData.results.primary,
-        secondary: appData.results.secondary,
-        scores: buildScores_(),
-        answersCount: (appData.answers || []).length
-    };
+  const uuid = genUUID_();
+  const scores = buildScores_();
+  const breakdown = buildFactorScores_();
 
-    try {
-        // สำคัญ: no-cors + Content-Type ต้องเป็น text/plain (ห้าม application/json)
-        await fetch(SCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(payload)
-        });
+  const payload = {
+    uuid: uuid,
+    ts: new Date().toISOString(),
+    name: appData.profile?.name || '',
+    position: appData.profile?.position || '',
+    experience: appData.profile?.experience || '',
+    primary: appData.results.primary,
+    secondary: appData.results.secondary,
+    scores: scores,
+    answersCount: (appData.answers || []).length,
 
-        console.log("✅ Sent (no-cors) — บันทึกเข้าชีตแล้ว (ถ้า Apps Script รับข้อมูลปกติ)");
-    } catch (err) {
-        console.error("❌ Sheet error", err);
-    }
+    // ✅ ส่ง breakdown สำหรับหลังบ้าน
+    factorTotals: breakdown.factorTotals,
+    factorPersona: breakdown.factorPersona
+  };
+
+  try {
+    // no-cors: อ่านผลตอบกลับไม่ได้ แต่ยิงเข้า Apps Script ได้
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+
+    console.log("✅ Sent (no-cors) — ถ้า Apps Script รับข้อมูลถูก จะบันทึกเข้าชีต");
+  } catch (err) {
+    console.error("❌ Sheet error", err);
+  }
 }
-
 /** =========================================
  *  SHARE
  *  ========================================= */
 function shareResults() {
-    if (!appData.results) return;
+  if (!appData.results) return;
 
-    const primary = getPersona(appData.results.primary);
-    const name = appData.profile?.name || 'Guest';
-    const text = `${name} ได้ผลลัพธ์: ${primary.name} ${primary.emoji || ''}`;
+  const primary = getPersona(appData.results.primary);
+  const name = appData.profile?.name || 'Guest';
+  const text = `${name} ได้ผลลัพธ์: ${primary.name} ${primary.emoji || ''}`;
 
-    if (navigator.share) navigator.share({ title: 'My Work Style', text });
-    else alert(text);
+  if (navigator.share) navigator.share({ title: 'My Work Style', text });
+  else alert(text);
 }
 
 /** =========================================
