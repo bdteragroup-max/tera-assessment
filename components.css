@@ -408,7 +408,7 @@
   font-size: clamp(1.8rem, 3vw, 2.6rem); /* เดิมน่าจะ ~1.5 */
   font-weight: 700;
   line-height: 1.35;
-  color: #111;
+  color: #fff;
   text-align: center;
   text-shadow: 0 6px 20px rgba(0,0,0,.25);
 }
@@ -895,4 +895,5 @@
   background: rgba(227,6,19,0.85); /* TERA Red */
   border-color: rgba(227,6,19,1);
 }
+
 
