@@ -415,7 +415,7 @@
 .assess-subtitle {
   font-size: clamp(1.1rem, 1.6vw, 1.4rem);
   margin-top: 0.75rem;
-  color: rgba(0,0,0,.75);
+  color: #6b7280;
   text-align: center;
 }
 .assess-options button {
@@ -895,3 +895,4 @@
   background: rgba(227,6,19,0.85); /* TERA Red */
   border-color: rgba(227,6,19,1);
 }
+
